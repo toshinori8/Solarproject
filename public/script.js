@@ -206,9 +206,17 @@ function removeCost(button) {
 function getConfigs() {
     const maxPanelCount = parseInt(document.getElementById('panelCount').value) || 8;
     const batteryOptions = [];
-    if (document.getElementById('battery4').checked) batteryOptions.push(4);
-    if (document.getElementById('battery8').checked) batteryOptions.push(8);
-    if (document.getElementById('battery10').checked) batteryOptions.push(10);
+    if (document.getElementById('battery2').checked) batteryOptions.push(2);
+    // get value from checkboxes
+
+    // <label data-tooltip="Zaznacz, aby uwzględnić konfiguracje z 4 bateriami (12V, całkowita pojemność = 2 × pojemność jednej baterii)."><input type="checkbox" id="battery2" class="battery-option" checked onclick="updateResults()"> 2</label>
+
+
+
+    let barerry_config= document.querySelectorAll('.battery-option:checked');
+    for(let i=0;i<barerry_config.length;i++){
+        batteryOptions.push(parseInt(barerry_config[i].value));
+    }
 
     const configs = [];
     for (let panels = 4; panels <= maxPanelCount; panels += 2) {

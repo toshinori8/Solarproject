@@ -43,9 +43,18 @@
             <label data-tooltip="Różnica między taryfą dzienną a nocną za 1 kWh. Zakłada, że baterie są ładowane w nocy po niższej cenie (np. taryfa G12). Sprawdź cennik dostawcy (np. dzienna: 0.9 PLN/kWh, nocna: 0.35 PLN/kWh, różnica: 0.55 PLN/kWh). Wpływa na roczne oszczędności.">Oszczędności z ładowania nocnego (PLN/kWh): <input type="number" id="nightChargeSavings" value="0.55" step="0.01" oninput="updateResults()"></label>
             <h4>Konfiguracje baterii</h4>
             <div class="checkbox-group">
-                <label data-tooltip="Zaznacz, aby uwzględnić konfiguracje z 4 bateriami (12V, całkowita pojemność = 4 × pojemność jednej baterii)."><input type="checkbox" id="battery4" checked onclick="updateResults()"> 4 baterie</label>
-                <label data-tooltip="Zaznacz, aby uwzględnić konfiguracje z 8 bateriami (12V, całkowita pojemność = 8 × pojemność jednej baterii)."><input type="checkbox" id="battery8" checked onclick="updateResults()"> 8 baterii</label>
-                <label data-tooltip="Zaznacz, aby uwzględnić konfiguracje z 10 bateriami (12V, całkowita pojemność = 10 × pojemność jednej baterii)."><input type="checkbox" id="battery10" onclick="updateResults()"> 10 baterii</label>
+
+                <label data-tooltip="Zaznacz, aby uwzględnić konfiguracje z 2 bateriami"><input type="checkbox" id="battery2" class="battery-option" value="2" onclick="updateResults()"> 2 szt.</label>
+                           
+                    <label data-tooltip="Zaznacz, aby uwzględnić konfiguracje z 4 bateriami"><input type="checkbox" id="battery4" class="battery-option" value="4" onclick="updateResults()"> 4 szt.</label>
+                    <label data-tooltip="Zaznacz, aby uwzględnić konfiguracje z 6 bateriami"><input type="checkbox" id="battery6" class="battery-option" value="6" onclick="updateResults()"> 6 szt.</label>    
+                           <label data-tooltip="Zaznacz, aby uwzględnić konfiguracje z 8 bateriami"><input type="checkbox" id="battery8" class="battery-option" value="8" onclick="updateResults()"> 8 szt.</label>
+                           <label data-tooltip="Zaznacz, aby uwzględnić konfiguracje z 10 bateriami"><input type="checkbox" id="battery10" class="battery-option" value="10" onclick="updateResults()"> 10 szt.</label>
+                           <label data-tooltip="Zaznacz, aby uwzględnić konfiguracje z 12 bateriami"><input type="checkbox" id="battery12" class="battery-option" value="12" onclick="updateResults()"> 12 szt.</label> 
+                           <label data-tooltip="Zaznacz, aby uwzględnić konfiguracje z 14 bateriami"><input type="checkbox" id="battery14" class="battery-option" value="14" onclick="updateResults()"> 14 szt.</label>
+
+            
+
             </div>
 
             <h3>Zużycie Energii</h3>
