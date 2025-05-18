@@ -18,11 +18,19 @@
         </header>
 
         <!-- Parametry -->
+        
+        
+
+
+
         <div class="section" id="parameters">
-            <h2>Parametry</h2>
+            <h2>Parametry</h2> 
             <h3>Parametry Systemu Solarnego</h3>
             <label data-tooltip="Maksymalna liczba paneli słonecznych w systemie. Wpisz, ile paneli chcesz uwzględnić (np. 8, 10, 12). Generuje konfiguracje dla zakresu od 4 paneli do tej wartości (krok co 2) z wybranymi liczbami baterii (4, 8, 10).">Liczba paneli (maks.): <input type="number" id="panelCount" value="8" min="4" step="2" oninput="updateResults()"></label>
-            <label><button onclick="openAddressModal()">Podaj adres</button></label>
+            <label><button onclick="openAddressModal()">Podaj adres</button>
+            </label>
+            <label><button onclick="openConfigManagementModal()">Wczytaj dane z pamięci</button>
+            </label>
             <div class="address-details" id="addressDetails"></div>
             <label data-tooltip="Moc jednego panelu słonecznego w watach. Określa, ile energii panel może wygenerować. Standardowo 400-500W dla nowoczesnych paneli. Wpisz wartość z danych technicznych panelu (np. 425W dla panelu monokrystalicznego).">Moc panelu (W): <input type="number" id="panelPower" value="425" oninput="updateResults()"></label>
             <label data-tooltip="Pojemność jednej baterii w kilowatogodzinach (kWh). Określa, ile energii może przechować bateria. Kliknij przycisk obok, aby podać szczegółowe parametry (napięcie, pojemność w Ah, producent, oferta). Typowe wartości: 0.5-5 kWh (np. 1.005 kWh dla małej baterii domowej).">Pojemność baterii (kWh): <input type="number" id="batteryCapacity" value="1.005" step="0.001" oninput="updateResults()"> <button onclick="openBatteryModal()">Podaj szczegóły</button></label>
@@ -225,6 +233,37 @@
             <canvas id="energyChart"></canvas>
         </div>
     </div>
+
+
+
+    <dialog id="configManagementModal">
+        <h3>Zarządzaj Konfiguracjami</h3>
+    
+        <section>
+            <h4>Zapisz bieżącą konfigurację</h4>
+            <label for="configNameInput">Nazwa konfiguracji:</label>
+            <input type="text" id="configNameInput" placeholder="Np. Mój domowy setup">
+            <button id="saveCurrentConfigBtn">Zapisz bieżącą</button>
+        </section>
+    
+        <section>
+            <h4>Wczytaj lub usuń zapisaną konfigurację</h4>
+            <label for="savedConfigsSelect">Wybierz konfigurację:</label>
+            <select id="savedConfigsSelect">
+                <option value="">-- Brak zapisanych konfiguracji --</option>
+            </select>
+            <div class="dialog-buttons" style="margin-top:10px;">
+                <button id="loadSelectedConfigBtn">Wczytaj wybraną</button>
+                <button id="deleteSelectedConfigBtn" class="remove-btn">Usuń wybraną</button>
+            </div>
+        </section>
+    
+        <div id="configModalStatus" style="margin-top: 15px; min-height: 1.5em;"></div>
+        <div class="dialog-buttons" style="margin-top: 20px;">
+            <button onclick="closeConfigManagementModal()">Zamknij</button>
+        </div>
+    </dialog>
+
 
    <!--  <script src="animations.js"></script> -->
     <script src="script.js"></script>

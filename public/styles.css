@@ -63,7 +63,7 @@ body {
   height: 100%;
   background-image: url(/img/1.jpeg);
   background-size: cover;
-  filter: blur(7px);
+  filter: blur(17px);
 }
 
 /* Typography */
@@ -489,4 +489,52 @@ dialog label {
     padding: 8px 14px;
     font-size: 0.9rem;
   }
+}
+
+/* Style dla przycisku zarządzania konfiguracjami */
+.manage-configs-btn {
+  background-color: var(--secondary-color); /* Możesz wybrać inny kolor */
+  color: white;
+  padding: 10px 15px;
+  /* margin-bottom: 20px;  Już dodane inline, ale można tu */
+  display: block; 
+  margin-left: auto; 
+  margin-right: auto; /* Wyśrodkowanie jeśli jest blokowy */
+  max-width: 250px; /* Opcjonalnie, dla lepszego wyglądu */
+}
+
+.manage-configs-btn:hover {
+  background-color: var(--secondary-dark);
+}
+
+/* Style dla modala konfiguracji */
+#configManagementModal section {
+  margin-bottom: 20px;
+  padding-bottom: 15px;
+  border-bottom: 1px solid var(--border-color);
+}
+#configManagementModal section:last-of-type { /* Ostatnia sekcja bez dolnej krawędzi */
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+#configManagementModal h4 {
+  margin-top: 0;
+  margin-bottom: 10px;
+  color: var(--primary-dark);
+}
+
+#configManagementModal input[type="text"],
+#configManagementModal select {
+  width: calc(100% - 22px); /* Uwzględnia padding inputu/selecta */
+  margin-bottom: 10px;
+}
+
+#configModalStatus.success {
+  color: var(--secondary-dark);
+  font-weight: bold;
+}
+#configModalStatus.error {
+  color: var(--danger-color);
+  font-weight: bold;
 }

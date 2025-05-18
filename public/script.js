@@ -633,8 +633,238 @@ window.showSelectedConfig = function(configId) {
     }
 };
 
+// --- Zarządzanie Konfiguracjami (nowe funkcje) ---
+let configModal; // Zostanie zainicjowane w DOMContentLoaded
+let configNameInput;
+let savedConfigsSelect;
+let configModalStatus;
+
+function openConfigManagementModal() {
+    if (!configModal) {
+        console.error("Modal zarządzania konfiguracją nie został znaleziony.");
+        alert("Błąd: Elementy modalne do zarządzania konfiguracją nie zostały znalezione. Upewnij się, że HTML został poprawnie dodany.");
+        return;
+    }
+    configNameInput.value = ''; // Wyczyść poprzednią nazwę
+    configModalStatus.textContent = '';
+    configModalStatus.className = '';
+    loadSavedConfigurationsList();
+    configModal.showModal();
+}
+
+function closeConfigManagementModal() {
+    if (configModal) {
+        configModal.close();
+    }
+}
+
+async function loadSavedConfigurationsList() {
+    try {
+        const response = await fetch('/api/configs');
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({ error: 'Nie udało się pobrać listy konfiguracji.' }));
+            throw new Error(errorData.error || `Błąd serwera: ${response.status}`);
+        }
+        const configs = await response.json();
+        
+        savedConfigsSelect.innerHTML = ''; // Wyczyść istniejące opcje
+        const loadBtn = document.getElementById('loadSelectedConfigBtn');
+        const deleteBtn = document.getElementById('deleteSelectedConfigBtn');
+
+        if (configs.length === 0) {
+            const option = document.createElement('option');
+            option.value = '';
+            option.textContent = '-- Brak zapisanych konfiguracji --';
+            savedConfigsSelect.appendChild(option);
+            if(loadBtn) loadBtn.disabled = true;
+            if(deleteBtn) deleteBtn.disabled = true;
+        } else {
+            configs.forEach(config => {
+                const option = document.createElement('option');
+                option.value = config.name;
+                option.textContent = config.name;
+                savedConfigsSelect.appendChild(option);
+            });
+            if(loadBtn) loadBtn.disabled = false;
+            if(deleteBtn) deleteBtn.disabled = false;
+        }
+    } catch (error) {
+        console.error('Błąd ładowania listy konfiguracji:', error);
+        configModalStatus.textContent = `Błąd ładowania listy: ${error.message}`;
+        configModalStatus.className = 'error';
+        savedConfigsSelect.innerHTML = '<option value="">-- Błąd ładowania --</option>';
+        const loadBtn = document.getElementById('loadSelectedConfigBtn');
+        const deleteBtn = document.getElementById('deleteSelectedConfigBtn');
+        if(loadBtn) loadBtn.disabled = true;
+        if(deleteBtn) deleteBtn.disabled = true;
+    }
+}
+
+function getCurrentConfigData() {
+    // Zbierz bieżące dane (tak jak w saveData, ale bez zapisu do localStorage tutaj)
+    return {
+        panelCount: document.getElementById('panelCount').value,
+        addressDetails: addressDetails,
+        panelPower: document.getElementById('panelPower').value,
+        batteryCapacity: document.getElementById('batteryCapacity').value,
+        batteryDetails: batteryDetails,
+        dod: document.getElementById('dod').value,
+        annualProdFactor: document.getElementById('annualProdFactor').value,
+        winterProdFactor: document.getElementById('winterProdFactor').value,
+        summerProdFactor: document.getElementById('summerProdFactor').value,
+        gridPrice: document.getElementById('gridPrice').value,
+        nightChargeSavings: document.getElementById('nightChargeSavings').value,
+        bimonthlyConsumption: document.getElementById('bimonthlyConsumption').value,
+        waterHeatingPower: document.getElementById('waterHeatingPower').value,
+        waterHeatingHours: document.getElementById('waterHeatingHours').value,
+        bathroomHeatingPower: document.getElementById('bathroomHeatingPower').value,
+        bathroomHeatingHours: document.getElementById('bathroomHeatingHours').value,
+        panelPrice: document.getElementById('panelPrice').value,
+        batteryPrice: document.getElementById('batteryPrice').value,
+        inverterPrice: document.getElementById('inverterPrice').value,
+        batteryOptions: {
+            battery4: document.getElementById('battery4').checked,
+            battery8: document.getElementById('battery8').checked,
+            battery10: document.getElementById('battery10').checked
+        },
+        devices: Array.from(document.getElementById('deviceTable').getElementsByTagName('tr')).slice(1).map(row => {
+            const inputs = row.getElementsByTagName('input');
+            return { name: inputs[0].value, power: inputs[1].value, hours: inputs[2].value };
+        }),
+        costs: Array.from(document.getElementById('costTable').getElementsByTagName('tr')).slice(1).map(row => {
+            const inputs = row.getElementsByTagName('input');
+            return { name: inputs[0].value, amount: inputs[1].value };
+        })
+    };
+}
+
+async function saveCurrentConfigurationToServer() {
+    const name = configNameInput.value.trim();
+    if (!name) {
+        configModalStatus.textContent = 'Proszę podać nazwę dla konfiguracji.';
+        configModalStatus.className = 'error';
+        return;
+    }
+
+    const currentConfigData = getCurrentConfigData();
+
+    try {
+        configModalStatus.textContent = 'Zapisywanie...';
+        configModalStatus.className = '';
+        const response = await fetch('/api/configs', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name, data: currentConfigData }),
+        });
+        
+        const result = await response.json();
+        if (!response.ok) {
+            throw new Error(result.error || `Błąd serwera: ${response.status}`);
+        }
+        
+        configModalStatus.textContent = result.message || 'Konfiguracja zapisana pomyślnie!';
+        configModalStatus.className = 'success';
+        configNameInput.value = ''; // Wyczyść input po zapisie
+        loadSavedConfigurationsList(); // Odśwież listę
+    } catch (error) {
+        console.error('Błąd zapisu konfiguracji:', error);
+        configModalStatus.textContent = `Błąd zapisu: ${error.message}`;
+        configModalStatus.className = 'error';
+    }
+}
+
+async function loadSelectedConfigurationFromServer() {
+    const selectedName = savedConfigsSelect.value;
+    if (!selectedName) {
+        configModalStatus.textContent = 'Proszę wybrać konfigurację do wczytania.';
+        configModalStatus.className = 'error';
+        return;
+    }
+
+    try {
+        configModalStatus.textContent = 'Wczytywanie...';
+        configModalStatus.className = '';
+        const response = await fetch('/api/configs'); // Pobiera wszystkie konfiguracje
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({ error: 'Nie udało się pobrać konfiguracji.' }));
+            throw new Error(errorData.error || `Błąd serwera: ${response.status}`);
+        }
+        const configs = await response.json();
+        const selectedConfig = configs.find(c => c.name === selectedName);
+
+        if (!selectedConfig || !selectedConfig.data) {
+            throw new Error('Wybrana konfiguracja nie została znaleziona lub jest uszkodzona.');
+        }
+
+        // Zapisz do localStorage, a następnie wczytaj do UI
+        localStorage.setItem('solarToolData', JSON.stringify(selectedConfig.data));
+        loadData(); // Ta funkcja powinna odczytać z localStorage i zaktualizować UI
+
+        configModalStatus.textContent = `Konfiguracja '${selectedName}' wczytana pomyślnie!`;
+        configModalStatus.className = 'success';
+        setTimeout(() => { // Zamknij modal po krótkim opóźnieniu
+            closeConfigManagementModal();
+        }, 1500);
+    } catch (error) {
+        console.error('Błąd wczytywania konfiguracji:', error);
+        configModalStatus.textContent = `Błąd wczytywania: ${error.message}`;
+        configModalStatus.className = 'error';
+    }
+}
+
+async function deleteSelectedConfigurationFromServer() {
+    const selectedName = savedConfigsSelect.value;
+    if (!selectedName) {
+        configModalStatus.textContent = 'Proszę wybrać konfigurację do usunięcia.';
+        configModalStatus.className = 'error';
+        return;
+    }
+
+    if (!confirm(`Czy na pewno chcesz usunąć konfigurację "${selectedName}"? Tej operacji nie można cofnąć.`)) {
+        return;
+    }
+
+    try {
+        configModalStatus.textContent = 'Usuwanie...';
+        configModalStatus.className = '';
+        const response = await fetch(`/api/configs/${encodeURIComponent(selectedName)}`, {
+            method: 'DELETE',
+        });
+        
+        const result = await response.json();
+        if (!response.ok) {
+            throw new Error(result.error || `Błąd serwera: ${response.status}`);
+        }
+
+        configModalStatus.textContent = result.message || `Konfiguracja '${selectedName}' usunięta pomyślnie!`;
+        configModalStatus.className = 'success';
+        loadSavedConfigurationsList(); // Odśwież listę
+    } catch (error) {
+        console.error('Błąd usuwania konfiguracji:', error);
+        configModalStatus.textContent = `Błąd usuwania: ${error.message}`;
+        configModalStatus.className = 'error';
+    }
+}
+
 // Add smooth reveal animation on page load
 document.addEventListener('DOMContentLoaded', function() {
+    // Inicjalizacja elementów modala konfiguracji
+    configModal = document.getElementById('configManagementModal');
+    configNameInput = document.getElementById('configNameInput');
+    savedConfigsSelect = document.getElementById('savedConfigsSelect');
+    configModalStatus = document.getElementById('configModalStatus');
+
+    // Dodanie event listenerów do przycisków w modalu
+    const saveBtn = document.getElementById('saveCurrentConfigBtn');
+    if (saveBtn) saveBtn.addEventListener('click', saveCurrentConfigurationToServer);
+    
+    const loadBtn = document.getElementById('loadSelectedConfigBtn');
+    if (loadBtn) loadBtn.addEventListener('click', loadSelectedConfigurationFromServer);
+
+    const deleteBtn = document.getElementById('deleteSelectedConfigBtn');
+    if (deleteBtn) deleteBtn.addEventListener('click', deleteSelectedConfigurationFromServer);
+
+    // Istniejąca logika animacji i ładowania danych
     const sections = document.querySelectorAll('.section');
     sections.forEach((section, index) => {
         // Set initial state
@@ -652,3 +882,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Load data after slight delay to ensure smooth animation
     setTimeout(loadData, 300);
 });
+
+// Upewnij się, że funkcje otwierania/zamykania modala są globalne, jeśli używasz ich w atrybutach onclick HTML
+window.openConfigManagementModal = openConfigManagementModal;
+window.closeConfigManagementModal = closeConfigManagementModal;

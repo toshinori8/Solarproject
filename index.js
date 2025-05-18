@@ -116,13 +116,36 @@ app.get('/api/pvgis', async (req, res) => {
 // Save configuration
 app.post('/api/configs', async (req, res) => {
   try {
-    const configs = req.body;
-    if (!configs) {
-      return res.status(400).json({ error: 'Configuration data is required' });
+    const { name, data: newConfigData } = req.body; // Oczekujemy nazwy i danych konfiguracji
+    if (!name || !newConfigData) {
+      return res.status(400).json({ error: 'Nazwa konfiguracji oraz dane są wymagane' });
     }
 
-    await fs.writeFile(CONFIGS_FILE, JSON.stringify(configs, null, 2));
-    res.json({ message: 'Configuration saved successfully' });
+    let configsArray = [];
+    try {
+      const fileContent = await fs.readFile(CONFIGS_FILE, 'utf8');
+      configsArray = JSON.parse(fileContent);
+      if (!Array.isArray(configsArray)) { // Upewnij się, że to tablica
+          configsArray = [];
+      }
+    } catch (error) {
+      if (error.code !== 'ENOENT') { // Ignoruj jeśli plik nie istnieje, zostanie utworzony
+        throw error;
+      }
+      // Jeśli ENOENT, configsArray pozostaje []
+    }
+
+    const existingConfigIndex = configsArray.findIndex(c => c.name === name);
+    if (existingConfigIndex > -1) {
+      // Aktualizuj istniejącą konfigurację
+      configsArray[existingConfigIndex].data = newConfigData;
+    } else {
+      // Dodaj nową konfigurację
+      configsArray.push({ name, data: newConfigData });
+    }
+
+    await fs.writeFile(CONFIGS_FILE, JSON.stringify(configsArray, null, 2));
+    res.json({ message: `Konfiguracja '${name}' zapisana pomyślnie`, configs: configsArray });
   } catch (error) {
     console.error('Save config error:', error);
     res.status(500).json({ 
@@ -136,10 +159,14 @@ app.post('/api/configs', async (req, res) => {
 app.get('/api/configs', async (req, res) => {
   try {
     const data = await fs.readFile(CONFIGS_FILE, 'utf8');
-    res.json(JSON.parse(data));
+    const configsArray = JSON.parse(data);
+    if (!Array.isArray(configsArray)) { // Powinno być tablicą dzięki logice POST
+        return res.json([]);
+    }
+    res.json(configsArray); // Zwraca tablicę obiektów {name, data}
   } catch (error) {
     if (error.code === 'ENOENT') {
-      // If file doesn't exist, return empty array
+      // Jeśli plik nie istnieje, zwróć pustą tablicę
       res.json([]);
     } else {
       console.error('Load config error:', error);
@@ -148,6 +175,46 @@ app.get('/api/configs', async (req, res) => {
         details: error.message 
       });
     }
+  }
+});
+
+// Delete configuration
+app.delete('/api/configs/:name', async (req, res) => {
+  try {
+    const configName = req.params.name;
+    if (!configName) {
+      return res.status(400).json({ error: 'Nazwa konfiguracji jest wymagana' });
+    }
+
+    let configsArray = [];
+    try {
+      const fileContent = await fs.readFile(CONFIGS_FILE, 'utf8');
+      configsArray = JSON.parse(fileContent);
+       if (!Array.isArray(configsArray)) {
+          configsArray = [];
+      }
+    } catch (error) {
+      if (error.code === 'ENOENT') {
+        return res.status(404).json({ error: 'Plik konfiguracji nie znaleziony, nic do usunięcia.' });
+      }
+      throw error;
+    }
+
+    const initialLength = configsArray.length;
+    configsArray = configsArray.filter(c => c.name !== configName);
+
+    if (configsArray.length === initialLength) {
+      return res.status(404).json({ error: `Konfiguracja '${configName}' nie znaleziona.` });
+    }
+
+    await fs.writeFile(CONFIGS_FILE, JSON.stringify(configsArray, null, 2));
+    res.json({ message: `Konfiguracja '${configName}' usunięta pomyślnie`, configs: configsArray });
+  } catch (error) {
+    console.error('Delete config error:', error);
+    res.status(500).json({
+      error: 'Błąd podczas usuwania konfiguracji',
+      details: error.message
+    });
   }
 });
 
