@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Solar System Comparison Tool</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <div class="solar-animation-container">
+        <div id="solarAnimation"></div>
+    </div>
+    
+    <div class="content-wrapper">
+        <header>
+            <h1>Solar System Comparison Tool</h1>
+        </header>
+
+        <!-- Parametry -->
+        <div class="section" id="parameters">
+            <h2>Parametry</h2>
+            <h3>Parametry Systemu Solarnego</h3>
+            <label data-tooltip="Maksymalna liczba paneli słonecznych w systemie. Wpisz, ile paneli chcesz uwzględnić (np. 8, 10, 12). Generuje konfiguracje dla zakresu od 4 paneli do tej wartości (krok co 2) z wybranymi liczbami baterii (4, 8, 10).">Liczba paneli (maks.): <input type="number" id="panelCount" value="8" min="4" step="2" oninput="updateResults()"></label>
+            <label><button onclick="openAddressModal()">Podaj adres</button></label>
+            <div class="address-details" id="addressDetails"></div>
+            <label data-tooltip="Moc jednego panelu słonecznego w watach. Określa, ile energii panel może wygenerować. Standardowo 400-500W dla nowoczesnych paneli. Wpisz wartość z danych technicznych panelu (np. 425W dla panelu monokrystalicznego).">Moc panelu (W): <input type="number" id="panelPower" value="425" oninput="updateResults()"></label>
+            <label data-tooltip="Pojemność jednej baterii w kilowatogodzinach (kWh). Określa, ile energii może przechować bateria. Kliknij przycisk obok, aby podać szczegółowe parametry (napięcie, pojemność w Ah, producent, oferta). Typowe wartości: 0.5-5 kWh (np. 1.005 kWh dla małej baterii domowej).">Pojemność baterii (kWh): <input type="number" id="batteryCapacity" value="1.005" step="0.001" oninput="updateResults()"> <button onclick="openBatteryModal()">Podaj szczegóły</button></label>
+            <div class="battery-details" id="batteryDetails"></div>
+            <label data-tooltip="Procent pojemności baterii, który można bezpiecznie wykorzystać bez uszkodzenia. Standardowo 80-90% dla baterii litowo-jonowych, 50-60% dla ołowiowo-kwasowych. Wyższa wartość zwiększa dostępną energię, ale może skrócić żywotność. Wpisz wartość z dokumentacji (np. 80%). Zalecane: 80% dla LiFePO4 (kompromis), 90% dla maksimum energii, 70% dla dłuższej żywotności.">Głębokość rozładowania (%): <input type="number" id="dod" value="80" oninput="updateResults()"></label>
+            <label data-tooltip="Ilość energii (kWh) wyprodukowana rocznie przez 1 kWp mocy paneli. Zależy od nasłonecznienia w Twojej lokalizacji. Standardowo ~900-1100 kWh/kWp/rok w Polsce. Kliknij „Podaj adres" lub użyj PVGIS (https://re.jrc.ec.europa.eu/pvg_tools/en/) dla dokładnej wartości.">Roczny współczynnik produkcji (kWh/kWp/rok): <input type="number" id="annualProdFactor" value="900" oninput="updateResults()"></label>
+            <label data-tooltip="Dzienna produkcja energii w zimie (grudzień-luty) na 1 kWp mocy paneli. Niższa ze względu na krótsze dni. Standardowo ~1-1.5 kWh/dzień/kWp w Polsce. Kliknij „Podaj adres" lub sprawdź w PVGIS dla Twojej lokalizacji.">Zimowy współczynnik produkcji (kWh/dzień/kWp): <input type="number" id="winterProdFactor" value="1.176" step="0.001" oninput="updateResults()"></label>
+            <label data-tooltip="Dzienna produkcja energii w lecie (czerwiec-sierpień) na 1 kWp mocy paneli. Wyższa dzięki dłuższym dniom. Standardowo ~3-4 kWh/dzień/kWp w Polsce. Kliknij „Podaj adres" lub sprawdź w PVGIS dla Twojej lokalizacji.">Letni współczynnik produkcji (kWh/dzień/kWp): <input type="number" id="summerProdFactor" value="3.588" step="0.001" oninput="updateResults()"></label>
+            <label data-tooltip="Koszt 1 kWh energii kupowanej z sieci w taryfie dziennej. Sprawdź rachunek za prąd lub cennik dostawcy (np. 0.9 PLN/kWh w 2025 r.). Wyższa wartość zwiększa oszczędności z paneli słonecznych.">Cena energii z sieci (PLN/kWh): <input type="number" id="gridPrice" value="0.9" step="0.01" oninput="updateResults()"></label>
+            <label data-tooltip="Różnica między taryfą dzienną a nocną za 1 kWh. Zakłada, że baterie są ładowane w nocy po niższej cenie (np. taryfa G12). Sprawdź cennik dostawcy (np. dzienna: 0.9 PLN/kWh, nocna: 0.35 PLN/kWh, różnica: 0.55 PLN/kWh). Wpływa na roczne oszczędności.">Oszczędności z ładowania nocnego (PLN/kWh): <input type="number" id="nightChargeSavings" value="0.55" step="0.01" oninput="updateResults()"></label>
+            <h4>Konfiguracje baterii</h4>
+            <div class="checkbox-group">
+                <label data-tooltip="Zaznacz, aby uwzględnić konfiguracje z 4 bateriami (12V, całkowita pojemność = 4 × pojemność jednej baterii)."><input type="checkbox" id="battery4" checked onclick="updateResults()"> 4 baterie</label>
+                <label data-tooltip="Zaznacz, aby uwzględnić konfiguracje z 8 bateriami (12V, całkowita pojemność = 8 × pojemność jednej baterii)."><input type="checkbox" id="battery8" checked onclick="updateResults()"> 8 baterii</label>
+                <label data-tooltip="Zaznacz, aby uwzględnić konfiguracje z 10 bateriami (12V, całkowita pojemność = 10 × pojemność jednej baterii)."><input type="checkbox" id="battery10" onclick="updateResults()"> 10 baterii</label>
+            </div>
+
+            <h3>Zużycie Energii</h3>
+            <label data-tooltip="Zużycie energii w ciągu 2 miesięcy (kWh), widoczne na rachunku za prąd. Używane do obliczenia bazowego dziennego zużycia (dzielone przez 60 dni). Typowe dla domu: 200-500 kWh na 2 miesiące. Wpisz wartość z ostatniego rachunku (np. 300 kWh).">Aktualne zużycie dwumiesięczne (kWh): <input type="number" id="bimonthlyConsumption" value="300" oninput="updateResults()"></label>
+            <label data-tooltip="Moc urządzenia do podgrzewania wody (np. bojler) w kilowatach. Sprawdź tabliczkę znamionową urządzenia (np. 2 kW dla standardowego bojlera). Wpływa na prognozowane dzienne zużycie energii.">Podgrzewanie wody - Moc (kW): <input type="number" id="waterHeatingPower" value="2" step="0.1" oninput="updateResults()"></label>
+            <label data-tooltip="Średni czas pracy bojlera dziennie w godzinach. Zależy od liczby osób w domu (np. 2 godziny dla 3-4 osób). Wpisz szacowaną wartość, mnożoną przez moc, aby obliczyć dzienne zużycie (np. 2 kW × 2 h = 4 kWh/dzień).">Podgrzewanie wody - Użycie (godz/dzień): <input type="number" id="waterHeatingHours" value="2" step="0.1" oninput="updateResults()"></label>
+            <label data-tooltip="Moc urządzenia do ogrzewania łazienki (np. grzejnik elektryczny) w kilowatach. Sprawdź specyfikację (np. 1.5 kW dla małego grzejnika). Wpływa na prognozowane dzienne zużycie energii.">Ogrzewanie łazienki - Moc (kW): <input type="number" id="bathroomHeatingPower" value="1.5" step="0.1" oninput="updateResults()"></label>
+            <label data-tooltip="Średni czas pracy grzejnika łazienkowego dziennie w godzinach. Zależy od użytkowania (np. 3 godziny w zimie). Wpisz szacowaną wartość, mnożoną przez moc (np. 1.5 kW × 3 h = 4.5 kWh/dzień).">Ogrzewanie łazienki - Użycie (godz/dzień): <input type="number" id="bathroomHeatingHours" value="3" step="0.1" oninput="updateResults()"></label>
+            <h4>Inne urządzenia</h4>
+            <div class="table-container">
+                <table id="deviceTable">
+                    <tr>
+                        <th data-tooltip="Nazwa urządzenia elektrycznego w Twoim domu (np. lodówka, TV, czajnik). Pomaga zorganizować listę urządzeń.">Nazwa</th>
+                        <th data-tooltip="Moc urządzenia w kilowatach (kW). Sprawdź tabliczkę znamionową lub instrukcję (np. 0.7 kW dla mikrofalówki).">Moc (kW)</th>
+                        <th data-tooltip="Średni czas użytkowania urządzenia dziennie w godzinach. Szacuj na podstawie zwyczajów (np. TV działa 2 h/dzień).">Użycie (godz/dzień)</th>
+                        <th data-tooltip="Akcje, takie jak usunięcie urządzenia z listy.">Akcje</th>
+                    </tr>
+                    <tr>
+                        <td><input type="text" value="Mikrofalówka" class="device-name" oninput="updateResults()"></td>
+                        <td><input type="number" value="0.7" step="0.1" class="device-power" oninput="updateResults()"></td>
+                        <td><input type="number" value="0.1" step="0.1" class="device-hours" oninput="updateResults()"></td>
+                        <td><button class="remove-btn" onclick="removeDevice(this)">Usuń</button></td>
+                    </tr>
+                    <tr>
+                        <td><input type="text" value="TV" class="device-name" oninput="updateResults()"></td>
+                        <td><input type="number" value="0.1" step="0.1" class="device-power" oninput="updateResults()"></td>
+                        <td><input type="number" value="2" step="0.1" class="device-hours" oninput="updateResults()"></td>
+                        <td><button class="remove-btn" onclick="removeDevice(this)">Usuń</button></td>
+                    </tr>
+                </table>
+            </div>
+            <button class="add-btn" onclick="addDevice()">Dodaj urządzenie</button>
+
+            <h3>Koszty</h3>
+            <label data-tooltip="Koszt zakupu jednego panelu słonecznego w PLN. Sprawdź oferty producentów (np. 500 PLN za panel 425W w 2025 r.). Wpływa na całkowity koszt instalacji.">Cena panelu (PLN): <input type="number" id="panelPrice" value="500" oninput="updateResults()"></label>
+            <label data-tooltip="Koszt jednej baterii w PLN. Sprawdź specyfikację (np. 300 PLN za baterię 1 kWh). Wpływa na całkowity koszt instalacji.">Cena baterii (PLN): <input type="number" id="batteryPrice" value="300" oninput="updateResults()"></label>
+            <label data-tooltip="Koszt inwertera, który konwertuje prąd z paneli na użyteczny w domu. Typowe ceny: 1000-5000 PLN. Wpisz wartość z oferty (np. 1000 PLN dla małego inwertera).">Cena inwertera (PLN): <input type="number" id="inverterPrice" value="1000" oninput="updateResults()"></label>
+            <h4>Inne koszty</h4>
+            <div class="table-container">
+                <table id="costTable">
+                    <tr>
+                        <th data-tooltip="Nazwa dodatkowego kosztu instalacji (np. kable, konstrukcja, robocizna). Pomaga zorganizować wydatki.">Nazwa</th>
+                        <th data-tooltip="Koszt w PLN dla danego elementu. Wpisz kwotę z oferty lub szacunku (np. 200 PLN za sprzęt montażowy).">Koszt (PLN)</th>
+                        <th data-tooltip="Akcje, takie jak usunięcie kosztu z listy.">Akcje</th>
+                    </tr>
+                    <tr>
+                        <td><input type="text" value="Sprzęt montażowy" class="cost-name" oninput="updateResults()"></td>
+                        <td><input type="number" value="200" class="cost-amount" oninput="updateResults()"></td>
+                        <td><button class="remove-btn" onclick="removeCost(this)">Usuń</button></td>
+                    </tr>
+                    <tr>
+                        <td><input type="text" value="Opłata instalacyjna" class="cost-name" oninput="updateResults()"></td>
+                        <td><input type="number" value="500" class="cost-amount" oninput="updateResults()"></td>
+                        <td><button class="remove-btn" onclick="removeCost(this)">Usuń</button></td>
+                    </tr>
+                </table>
+            </div>
+            <button class="add-btn" onclick="addCost()">Dodaj koszt</button>
+        </div>
+
+        <!-- Modal dla parametrów baterii -->
+        <dialog id="batteryModal">
+            <h3>Parametry Baterii</h3>
+            <label data-tooltip="Napięcie baterii w woltach. Typowe dla domowych systemów solarnych: 12V lub 24V. Sprawdź specyfikację baterii (np. 12V dla VOLT Polska LiFePO4).">Napięcie (V): <input type="number" id="batteryVolts" value="12" step="0.1"></label>
+            <label data-tooltip="Pojemność baterii w wybranych jednostkach (kWh lub Ah). Jeśli wybierzesz Ah, podaj napięcie, aby przeliczyć na kWh (kWh = Ah × Volts / 1000). Przykład: 100Ah przy 12V = 1.2 kWh.">Pojemność: <input type="number" id="batteryCapacityInput" value="100" step="0.001"> 
+                <select id="capacityUnit">
+                    <option value="kWh">kWh</option>
+                    <option value="Ah">Ah</option>
+                </select>
+            </label>
+            <label data-tooltip="Nazwa producenta baterii (np. VOLT Polska, Tesla). Wpisz, aby śledzić źródło baterii. Sprawdź w ofercie (np. Allegro.pl, volton.pl).">Producent: <input type="text" id="batteryManufacturer" value="VOLT Polska"></label>
+            <label data-tooltip="Adres URL do oferty baterii (np. na Allegro.pl, volton.pl). Wklej link, aby łatwo wrócić do oferty (opcjonalne). Przykład: https://allegro.pl/oferta/volt-akumulator-lifepo4-12v-100ah">Link do oferty: <input type="text" id="batteryOfferLink" value="" placeholder="https://allegro.pl/..."></label>
+            <div class="dialog-buttons">
+                <button onclick="submitBatteryDetails()">Zapisz</button>
+                <button onclick="closeBatteryModal()">Anuluj</button>
+            </div>
+        </dialog>
+
+        <!-- Modal dla adresu i parametrów PVGIS -->
+        <dialog id="addressModal">
+            <h3>Podaj Adres i Parametry PVGIS</h3>
+            <label data-tooltip="Adres inwestycji (np. Warszawa, Mazowiecka 10). Wpisz, aby pobrać współrzędne i dane nasłonecznienia z PVGIS. Upewnij się, że adres jest dokładny.">Adres: <input type="text" id="address" placeholder="np. Warszawa, Mazowiecka 10"></label>
+            <label data-tooltip="Kąt nachylenia paneli w stopniach. Typowe wartości: 30-35° dla Polski (optymalne dla dachów). Wpisz wartość zgodną z planowaną instalacją.">Nachylenie paneli (°): <input type="number" id="panelAngle" value="30" step="1"></label>
+            <label data-tooltip="Orientacja paneli w stopniach (azymut). 0° = południe, -90° = wschód, 90° = zachód. Wpisz 0° dla optymalnej produkcji w Polsce (kierunek południowy).">Orientacja paneli (°): <input type="number" id="panelAspect" value="0" step="1"></label>
+            <label data-tooltip="Straty systemu w procentach (%). Obejmują straty w inwerterze, kablach, zabrudzenia paneli. Standardowo 14%. Wpisz wartość z dokumentacji instalacji (10-20%).">Straty systemu (%): <input type="number" id="systemLoss" value="14" step="1"></label>
+            <div id="addressStatus"></div>
+            <div class="dialog-buttons">
+                <button onclick="fetchPVGISData()">Pobierz dane z PVGIS</button>
+                <button onclick="closeAddressModal()">Anuluj</button>
+            </div>
+        </dialog>
+
+        <!-- Konfiguracje (ukryte) -->
+        <div class="section" id="configurations">
+            <h2>Konfiguracje</h2>
+            <p>Dynamiczne konfiguracje na podstawie zakresu liczby paneli i wybranych baterii.</p>
+        </div>
+
+        <!-- Wyniki -->
+        <div class="section" id="results">
+            <h2>Wyniki</h2>
+            <h3>Produkcja vs. Zużycie</h3>
+            <div class="table-container">
+                <table id="productionTable">
+                    <tr>
+                        <th data-tooltip="Identyfikator konfiguracji (np. 10p4b = 10 paneli, 4 baterie). Kliknij, aby porównać w sekcji poniżej.">Konfiguracja</th>
+                        <th data-tooltip="Całkowita energia wyprodukowana rocznie przez panele (kWh). Obliczana jako: liczba paneli × moc panelu × roczny współczynnik produkcji. Wyższa wartość oznacza więcej energii.">Roczna produkcja (kWh)</th>
+                        <th data-tooltip="Procent obecnego rocznego zużycia (z rachunku) pokryty przez produkcję paneli. Obliczany jako: (roczna produkcja / obecne zużycie roczne) × 100%. Wyższy % oznacza większą niezależność.">% obecnych potrzeb</th>
+                        <th data-tooltip="Procent prognozowanego rocznego zużycia (z urządzeń i rachunku) pokryty przez produkcję. Obliczany jako: (roczna produkcja / prognozowane zużycie) × 100%. Wyższy % jest lepszy.">% prognozowanych potrzeb</th>
+                        <th data-tooltip="Dzienna produkcja energii w zimie (kWh/dzień) dla danej konfiguracji. Obliczana jako: liczba paneli × moc panelu × zimowy współczynnik produkcji. Ważne dla sezonu zimowego.">Zima dzienna (kWh/dzień)</th>
+                        <th data-tooltip="Dzienna produkcja energii w lecie (kWh/dzień) dla danej konfiguracji. Obliczana jako: liczba paneli × moc panelu × letni współczynnik produkcji. Ważne dla sezonu letniego.">Lato dzienne (kWh/dzień)</th>
+                    </tr>
+                </table>
+            </div>
+
+            <h3>Wpływ Pojemności Baterii</h3>
+            <div class="table-container">
+                <table id="batteryTable">
+                    <tr>
+                        <th data-tooltip="Identyfikator konfiguracji (np. 10p4b = 10 paneli, 4 baterie).">Konfiguracja</th>
+                        <th data-tooltip="Użyteczna pojemność baterii (kWh), dostępna do wykorzystania. Obliczana jako: liczba baterii × pojemność baterii × głębokość rozładowania. Wyższa wartość pozwala przechować więcej energii.">Użyteczna pojemność (kWh)</th>
+                        <th data-tooltip="Procent obecnego dziennego zużycia (z rachunku) pokryty przez baterie. Obliczany jako: (użyteczna pojemność / obecne dzienne zużycie) × 100%. Wyższy % oznacza lepszą autonomię.">% obecnych dziennych potrzeb</th>
+                        <th data-tooltip="Procent prognozowanego dziennego zużycia (z urządzeń i rachunku) pokryty przez baterie. Obliczany jako: (użyteczna pojemność / prognozowane dzienne zużycie) × 100%. Wyższy % jest lepszy.">% prognozowanych dziennych potrzeb</th>
+                    </tr>
+                </table>
+            </div>
+
+            <h3>Analiza Niezależności Energetycznej</h3>
+            <h4>Scenariusz Zimowy</h4>
+            <div class="table-container">
+                <table id="winterTable">
+                    <tr>
+                        <th data-tooltip="Identyfikator konfiguracji (np. 10p4b = 10 paneli, 4 baterie).">Konfiguracja</th>
+                        <th data-tooltip="Dzienna produkcja energii z paneli w zimie (kWh/dzień). Obliczana jako: liczba paneli × moc panelu × zimowy współczynnik produkcji. Ważna dla oceny zimowej autonomii.">Produkcja solarna (kWh/dzień)</th>
+                        <th data-tooltip="Użyteczna pojemność baterii (kWh), dostępna na dany dzień. Obliczana jako: liczba baterii × pojemność baterii × głębokość rozładowania. Zakładamy pełne ładowanie nocne.">Pojemność baterii (kWh)</th>
+                        <th data-tooltip="Ilość energii (kWh/dzień), którą trzeba pobrać z sieci w zimie, jeśli produkcja i baterie nie wystarczą. Obliczana jako: dzienne zużycie - (produkcja zimowa + pojemność baterii). Niższa wartość oznacza większą niezależność.">Zależność od sieci (kWh/dzień)</th>
+                    </tr>
+                </table>
+            </div>
+            <h4>Scenariusz Letni</h4>
+            <div class="table-container">
+                <table id="summerTable">
+                    <tr>
+                        <th data-tooltip="Identyfikator konfiguracji (np. 10p4b = 10 paneli, 4 baterie).">Konfiguracja</th>
+                        <th data-tooltip="Dzienna produkcja energii z paneli w lecie (kWh/dzień). Obliczana jako: liczba paneli × moc panelu × letni współczynnik produkcji. Ważna dla oceny letniej nadwyżki.">Produkcja solarna (kWh/dzień)</th>
+                        <th data-tooltip="Użyteczna pojemność baterii (kWh), dostępna na dany dzień. Obliczana jako: liczba baterii × pojemność baterii × głębokość rozładowania. Zakładamy pełne ładowanie nocne.">Pojemność baterii (kWh)</th>
+                        <th data-tooltip="Nadwyżka energii (kWh/dzień) w lecie, jeśli produkcja i baterie przekraczają zużycie, lub deficyt, jeśli nie wystarczają. Obliczana jako: (produkcja letnia + pojemność baterii) - dzienne zużycie. Dodatnia wartość to nadwyżka, ujemna to deficyt.">Zależność od sieci/Nadwyżka (kWh/dzień)</th>
+                    </tr>
+                </table>
+            </div>
+
+            <h3>Zwrot z Inwestycji</h3>
+            <div class="table-container">
+                <table id="roiTable">
+                    <tr>
+                        <th data-tooltip="Identyfikator konfiguracji (np. 10p4b = 10 paneli, 4 baterie). Kliknij, aby zobaczyć szczegóły w sekcji porównania poniżej.">Konfiguracja</th>
+                        <th data-tooltip="Całkowity koszt instalacji w PLN. Obliczany jako: (liczba paneli × cena panelu) + (liczba baterii × cena baterii) + cena inwertera + inne koszty. Niższy koszt jest korzystniejszy, ale porównaj z oszczędnościami.">Całkowity koszt (PLN)</th>
+                        <th data-tooltip="Roczne oszczędności w PLN dzięki panelom i bateriom. Obliczane jako: (energia z paneli × cena energii z sieci) + (pojemność baterii × oszczędności z ładowania nocnego × 365 dni). Wyższe oszczędności skracają okres zwrotu.">Roczne oszczędności (PLN)</th>
+                        <th data-tooltip="Czas w latach, po którym inwestycja się zwróci. Obliczany jako: całkowity koszt / roczne oszczędności. Niższy okres zwrotu oznacza szybszy zwrot inwestycji (np. 5 lat to dobry wynik).">Okres zwrotu (lata)</th>
+                        <th data-tooltip="Zwrot z inwestycji po 5 latach w procentach. Obliczany jako: ((roczne oszczędności × 5 lat - całkowity koszt) / całkowity koszt) × 100%. Wyższy procent oznacza lepszą opłacalność (np. 20% to zysk po 5 latach).">ROI po 5 latach</th>
+                    </tr>
+                </table>
+            </div>
+        </div>
+
+        <!-- Rekomendowana i wybrana konfiguracja -->
+        <div class="section" id="recommendation">
+            <h2>Porównanie Konfiguracji</h2>
+            <div class="comparison">
+                <div class="comparison-card">
+                    <h3>Rekomendowana Konfiguracja</h3>
+                    <p id="recommendedConfig">Wczytywanie...</p>
+                    <ul id="recommendedDetails"></ul>
+                </div>
+                <div class="comparison-card">
+                    <h3>Wybrana Konfiguracja</h3>
+                    <p id="selectedConfig">Kliknij konfigurację w tabeli Zwrot z Inwestycji, aby porównać</p>
+                    <ul id="selectedDetails"></ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Wykres -->
+        <div class="section" id="chartContainer">
+            <canvas id="energyChart"></canvas>
+        </div>
+    </div>
+
+   <!--  <script src="animations.js"></script> -->
+    <script src="script.js"></script>
+</body>
+</html>
